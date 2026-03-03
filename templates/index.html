@@ -2,102 +2,246 @@
 <html lang="ru">
 <head>
     <meta charset="UTF-8">
-    <title>Super Messenger</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>Webgram</title>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/socket.io/4.0.1/socket.io.js"></script>
     <style>
-        :root { --bg: #f4f4f9; --panel: white; --text: #333; --accent: #0084ff; }
-        [data-theme="dark"] { --bg: #1a1a1a; --panel: #2d2d2d; --text: #eee; --accent: #3a86ff; }
+        :root {
+            --bg-body: #e6ebeb; --bg-panel: #ffffff; --bg-chat: #f4f4f5; 
+            --primary: #3390ec; --text-main: #000000; --text-muted: #707579;
+            --msg-my: #eeffde; --msg-other: #ffffff; --border: #dfe1e5;
+        }
+        [data-theme="dark"] {
+            --bg-body: #0f0f0f; --bg-panel: #212121; --bg-chat: #181818;
+            --primary: #8774e1; --text-main: #ffffff; --text-muted: #aaaaaa;
+            --msg-my: #8774e1; --msg-other: #212121; --border: #303030;
+        }
+
+        * { box-sizing: border-box; margin: 0; padding: 0; font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif; }
+        body { background: var(--bg-body); color: var(--text-main); display: flex; height: 100vh; justify-content: center; align-items: center; }
         
-        body { background: var(--bg); color: var(--text); font-family: sans-serif; margin: 0; display: flex; height: 100vh; }
-        .sidebar { width: 250px; background: var(--panel); border-right: 1px solid #444; display: flex; flex-direction: column; }
-        .chat-area { flex: 1; display: flex; flex-direction: column; }
+        .app-container { width: 100%; max-width: 1200px; height: 100vh; display: flex; background: var(--bg-panel); box-shadow: 0 4px 15px rgba(0,0,0,0.1); }
+        @media (min-width: 768px) { .app-container { height: 95vh; border-radius: 12px; overflow: hidden; } }
+
+        /* Sidebar */
+        .sidebar { width: 320px; border-right: 1px solid var(--border); display: flex; flex-direction: column; background: var(--bg-panel); }
+        .sidebar-header { padding: 15px; display: flex; align-items: center; justify-content: space-between; border-bottom: 1px solid var(--border); }
+        .sidebar-header h2 { font-size: 18px; font-weight: 600; }
+        .menu-btn { cursor: pointer; font-size: 20px; background: none; border: none; color: var(--text-muted); }
         
-        .user-item { padding: 10px; cursor: pointer; border-bottom: 1px solid #eee; display: flex; align-items: center; gap: 10px; }
-        .user-item:hover { background: var(--accent); color: white; }
-        .avatar { width: 40px; height: 40px; border-radius: 50%; background: #ccc; display: flex; align-items: center; justify-content: center; font-size: 20px; }
+        .chat-list { flex: 1; overflow-y: auto; }
+        .chat-item { display: flex; align-items: center; padding: 12px 15px; cursor: pointer; text-decoration: none; color: var(--text-main); transition: background 0.2s; }
+        .chat-item:hover, .chat-item.active { background: var(--bg-chat); }
+        .avatar { width: 48px; height: 48px; border-radius: 50%; background: linear-gradient(135deg, #3390ec, #00c6ff); display: flex; justify-content: center; align-items: center; font-size: 24px; color: white; margin-right: 15px; flex-shrink: 0; }
+        .chat-info { flex: 1; overflow: hidden; }
+        .chat-name { font-weight: 600; font-size: 15px; }
+
+        /* Chat Area */
+        .chat-area { flex: 1; display: flex; flex-direction: column; background: var(--bg-chat); }
+        .chat-header { padding: 10px 20px; background: var(--bg-panel); border-bottom: 1px solid var(--border); display: flex; align-items: center; }
+        .chat-header .avatar { width: 40px; height: 40px; font-size: 20px; cursor: pointer; }
         
-        #messages { flex: 1; overflow-y: auto; padding: 20px; }
-        .msg { margin-bottom: 10px; padding: 10px; border-radius: 8px; background: var(--panel); max-width: 70%; }
-        .msg.my { align-self: flex-end; background: var(--accent); color: white; margin-left: auto; }
+        .messages-container { flex: 1; padding: 20px; overflow-y: auto; display: flex; flex-direction: column; gap: 10px; }
+        .message { max-width: 65%; padding: 8px 14px; border-radius: 12px; font-size: 15px; line-height: 1.4; box-shadow: 0 1px 2px rgba(0,0,0,0.1); position: relative; }
+        .message.other { align-self: flex-start; background: var(--msg-other); border-bottom-left-radius: 4px; }
+        .message.my { align-self: flex-end; background: var(--msg-my); border-bottom-right-radius: 4px; }
+        [data-theme="dark"] .message.my { color: white; }
         
-        .input-box { padding: 20px; background: var(--panel); display: flex; gap: 10px; }
-        input { flex: 1; padding: 10px; border-radius: 5px; border: 1px solid #ddd; }
-        button { padding: 10px 20px; background: var(--accent); color: white; border: none; border-radius: 5px; cursor: pointer; }
-        
-        .settings { padding: 10px; font-size: 12px; border-top: 1px solid #eee; }
+        .sender-name { font-size: 13px; font-weight: 600; color: var(--primary); margin-bottom: 3px; cursor: pointer; display: inline-block; }
+        [data-theme="dark"] .message.my .sender-name { color: #ddd; }
+
+        /* Input Area */
+        .input-area { padding: 15px 20px; background: var(--bg-panel); display: flex; gap: 10px; align-items: center; }
+        .msg-input { flex: 1; padding: 14px 20px; border: none; border-radius: 24px; background: var(--bg-body); color: var(--text-main); font-size: 15px; outline: none; }
+        .send-btn { width: 48px; height: 48px; border-radius: 50%; background: var(--primary); color: white; border: none; cursor: pointer; display: flex; justify-content: center; align-items: center; font-size: 20px; transition: transform 0.1s; }
+        .send-btn:active { transform: scale(0.95); }
+
+        /* Modals (Profile & Settings) */
+        .modal-overlay { display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.5); z-index: 100; justify-content: center; align-items: center; }
+        .modal { background: var(--bg-panel); width: 320px; border-radius: 12px; padding: 24px; text-align: center; box-shadow: 0 10px 30px rgba(0,0,0,0.2); position: relative; }
+        .close-btn { position: absolute; top: 10px; right: 15px; cursor: pointer; font-size: 20px; color: var(--text-muted); }
+        .modal .avatar-large { width: 100px; height: 100px; border-radius: 50%; font-size: 50px; display: flex; align-items: center; justify-content: center; background: linear-gradient(135deg, #3390ec, #00c6ff); margin: 0 auto 15px; }
+        .modal h3 { margin-bottom: 5px; }
+        .modal p { color: var(--text-muted); font-size: 14px; margin-bottom: 20px; }
+
+        /* Settings Form */
+        .settings-form { text-align: left; }
+        .settings-form label { font-size: 13px; color: var(--text-muted); display: block; margin-top: 10px; }
+        .settings-form select, .settings-form input { width: 100%; padding: 10px; margin-top: 5px; border-radius: 8px; border: 1px solid var(--border); background: var(--bg-body); color: var(--text-main); }
+        .settings-form button { width: 100%; padding: 12px; margin-top: 15px; background: var(--primary); color: white; border: none; border-radius: 8px; cursor: pointer; font-weight: 600; }
+        .logout-link { display: block; text-align: center; margin-top: 15px; color: #e53935; text-decoration: none; font-size: 14px; font-weight: 600; }
     </style>
 </head>
 <body data-theme="{{ me.theme }}">
+
+<div class="app-container">
     <div class="sidebar">
-        <div style="padding: 20px;"><h3>Чаты</h3></div>
-        <div class="user-item" onclick="setRecipient(null)"><b>🌍 Общий чат</b></div>
-        <div id="user-list">
-            {% for u in users %}
-            <div class="user-item" onclick="setRecipient('{{ u.username }}')">
-                <div class="avatar">{{ u.avatar }}</div> {{ u.username }}
-            </div>
-            {% endfor %}
+        <div class="sidebar-header">
+            <button class="menu-btn" onclick="openSettings()">⚙️</button>
+            <h2>Чаты</h2>
+            <div style="width:20px"></div>
         </div>
-        
-        <div class="settings">
-            <form action="/update_settings" method="POST">
-                Тема: <select name="theme" onchange="this.form.submit()">
-                    <option value="light" {% if me.theme == 'light' %}selected{% endif %}>Светлая</option>
-                    <option value="dark" {% if me.theme == 'dark' %}selected{% endif %}>Темная</option>
-                </select><br><br>
-                Аватар: <select name="avatar" onchange="this.form.submit()">
-                    <option value="🐱" {% if me.avatar == '🐱' %}selected{% endif %}>Кот</option>
-                    <option value="🐶" {% if me.avatar == '🐶' %}selected{% endif %}>Пес</option>
-                    <option value="👻" {% if me.avatar == '👻' %}selected{% endif %}>Призрак</option>
-                </select>
-            </form>
-            <p>Вы: {{ username }} <a href="/login" style="color: red;">Выход</a></p>
+        <div class="chat-list">
+            <a href="/" class="chat-item {% if curr_group.id == 'global' %}active{% endif %}">
+                <div class="avatar">🌍</div>
+                <div class="chat-info"><div class="chat-name">Общий чат</div></div>
+            </a>
+            {% for u in users %}
+            <a href="/?chat={{ u.username }}" class="chat-item {% if curr_group.id == u.username %}active{% endif %}">
+                <div class="avatar">{{ u.avatar }}</div>
+                <div class="chat-info"><div class="chat-name">{{ u.username }}</div></div>
+            </a>
+            {% endfor %}
         </div>
     </div>
 
     <div class="chat-area">
-        <div id="messages">
-            {% for m in messages %}
-            <div class="msg {% if m.sender == username %}my{% endif %}">
-                <small>{{ m.sender }}</small><br>{{ m.message }}
+        <div class="chat-header">
+            <div class="avatar" onclick="openProfile('{{ curr_group.name }}')">{{ curr_group.avatar }}</div>
+            <div style="margin-left: 15px;">
+                <h3 style="font-size: 16px;">{{ curr_group.name }}</h3>
+                <span style="font-size: 13px; color: var(--text-muted);">{% if curr_group.type == 'dm' %}Был(а) недавно{% else %}Публичная группа{% endif %}</span>
+            </div>
+        </div>
+        
+        <div class="messages-container" id="chat-box">
+            {% for msg in messages %}
+            <div class="message {% if msg.sender == me.username %}my{% else %}other{% endif %}">
+                {% if msg.sender != me.username and curr_group.type == 'global' %}
+                <div class="sender-name" onclick="openProfile('{{ msg.sender }}')">{{ msg.sender }}</div>
+                {% endif %}
+                <div>{{ msg.message }}</div>
             </div>
             {% endfor %}
         </div>
-        <div class="input-box">
-            <input type="text" id="m-input" placeholder="Напишите...">
-            <button onclick="send()">Отправить</button>
+
+        <div class="input-area">
+            <input type="text" id="msg-input" class="msg-input" placeholder="Написать сообщение..." autocomplete="off">
+            <button class="send-btn" onclick="sendMessage()">➤</button>
         </div>
     </div>
+</div>
 
-    <script>
-        const socket = io();
-        let currentRecipient = null;
+<div class="modal-overlay" id="profile-modal" onclick="closeModal(event, 'profile-modal')">
+    <div class="modal">
+        <span class="close-btn" onclick="document.getElementById('profile-modal').style.display='none'">×</span>
+        <div class="avatar-large" id="modal-avatar">👤</div>
+        <h3 id="modal-username">Username</h3>
+        <p id="modal-bio">О себе...</p>
+        <a id="modal-dm-link" href="#" style="display:inline-block; padding:8px 20px; background:var(--primary); color:white; border-radius:20px; text-decoration:none;">Написать сообщение</a>
+    </div>
+</div>
 
-        socket.on('connect', () => socket.emit('join', {}));
+<div class="modal-overlay" id="settings-modal" onclick="closeModal(event, 'settings-modal')">
+    <div class="modal">
+        <span class="close-btn" onclick="document.getElementById('settings-modal').style.display='none'">×</span>
+        <h3>Мой профиль</h3>
+        <form class="settings-form" action="/update_profile{% if curr_group.id != 'global' %}?chat={{ curr_group.id }}{% endif %}" method="POST">
+            <label>Аватар (Emoji)</label>
+            <input type="text" name="avatar" value="{{ me.avatar }}" maxlength="2">
+            
+            <label>О себе</label>
+            <input type="text" name="bio" value="{{ me.bio }}" placeholder="Пару слов о вас...">
+            
+            <label>Тема оформления</label>
+            <select name="theme">
+                <option value="light" {% if me.theme == 'light' %}selected{% endif %}>Светлая</option>
+                <option value="dark" {% if me.theme == 'dark' %}selected{% endif %}>Темная</option>
+            </select>
+            
+            <button type="submit">Сохранить</button>
+        </form>
+        <a href="/logout" class="logout-link">Выйти из аккаунта</a>
+    </div>
+</div>
 
-        function setRecipient(name) {
-            currentRecipient = name;
-            document.querySelector('h3').innerText = name ? "Чат с " + name : "Общий чат";
-            document.getElementById('messages').innerHTML = ""; // Очистка для простоты при переключении
+<script>
+    // База данных пользователей для JS (чтобы моментально открывать профили)
+    const usersData = {
+        "{{ me.username }}": { avatar: "{{ me.avatar }}", bio: "{{ me.bio }}" },
+        {% for u in users %}
+        "{{ u.username }}": { avatar: "{{ u.avatar }}", bio: "{{ u.bio }}" },
+        {% endfor %}
+        "Общий чат": { avatar: "🌍", bio: "Публичное пространство для общения всех пользователей." }
+    };
+
+    const socket = io({ transports: ['websocket', 'polling'] });
+    const currentChat = "{{ curr_group.id }}";
+    const myName = "{{ me.username }}";
+    const chatBox = document.getElementById('chat-box');
+
+    // Прокрутка вниз при загрузке
+    chatBox.scrollTop = chatBox.scrollHeight;
+
+    function sendMessage() {
+        const input = document.getElementById('msg-input');
+        const msg = input.value.trim();
+        if (msg) {
+            socket.emit('send_msg', { message: msg, recipient: currentChat });
+            input.value = '';
         }
+    }
 
-        function send() {
-            const inp = document.getElementById('m-input');
-            if (inp.value) {
-                socket.emit('send_msg', {message: inp.value, recipient: currentRecipient});
-                inp.value = "";
+    document.getElementById('msg-input').addEventListener('keypress', function (e) {
+        if (e.key === 'Enter') sendMessage();
+    });
+
+    socket.on('receive_msg', function(data) {
+        // Показываем сообщение только если мы находимся в правильном чате
+        // 1. Это сообщение в текущий открытый глобальный чат
+        // 2. Это ЛС мне от человека, чат с которым сейчас открыт
+        // 3. Это моё сообщение этому человеку
+        const isGlobalChatOpen = currentChat === 'global' && data.recipient === 'global';
+        const isDMChatOpen = (currentChat === data.sender && data.recipient === myName) || 
+                             (data.sender === myName && data.recipient === currentChat);
+
+        if (isGlobalChatOpen || isDMChatOpen) {
+            const div = document.createElement('div');
+            const isMy = data.sender === myName;
+            div.className = `message ${isMy ? 'my' : 'other'}`;
+            
+            let html = '';
+            // Показываем имя отправителя только в общем чате и если это не я
+            if (!isMy && currentChat === 'global') {
+                html += `<div class="sender-name" onclick="openProfile('${data.sender}')">${data.sender}</div>`;
             }
+            html += `<div>${data.message}</div>`;
+            
+            div.innerHTML = html;
+            chatBox.appendChild(div);
+            chatBox.scrollTop = chatBox.scrollHeight;
         }
+    });
 
-        socket.on('receive_msg', (data) => {
-            if (data.recipient === currentRecipient || (!data.recipient && !currentRecipient)) {
-                const div = document.createElement('div');
-                div.className = 'msg' + (data.sender === "{{ username }}" ? ' my' : '');
-                div.innerHTML = `<small>${data.sender}</small><br>${data.message}`;
-                document.getElementById('messages').appendChild(div);
-                document.getElementById('messages').scrollTop = 99999;
-            }
-        });
-    </script>
+    // Управление модальными окнами
+    function openProfile(username) {
+        const data = usersData[username];
+        if(!data) return;
+        
+        document.getElementById('modal-username').innerText = username;
+        document.getElementById('modal-avatar').innerText = data.avatar;
+        document.getElementById('modal-bio').innerText = data.bio || 'Информация не указана.';
+        
+        const dmLink = document.getElementById('modal-dm-link');
+        if (username === myName || username === 'Общий чат') {
+            dmLink.style.display = 'none';
+        } else {
+            dmLink.style.display = 'inline-block';
+            dmLink.href = '/?chat=' + username;
+        }
+        
+        document.getElementById('profile-modal').style.display = 'flex';
+    }
+
+    function openSettings() {
+        document.getElementById('settings-modal').style.display = 'flex';
+    }
+
+    function closeModal(e, modalId) {
+        if (e.target.id === modalId) {
+            document.getElementById(modalId).style.display = 'none';
+        }
+    }
+</script>
 </body>
 </html>
