@@ -31,20 +31,19 @@ def init_db():
         conn.execute('''CREATE TABLE IF NOT EXISTS messages 
             (id INTEGER PRIMARY KEY AUTOINCREMENT, username TEXT, message TEXT, timestamp DATETIME DEFAULT CURRENT_TIMESTAMP)''')
         conn.commit()
-
 @app.route('/')
 def index():
     if 'user' not in session:
         return redirect(url_for('login'))
     
     with get_db() as conn:
-        # 1. Получаем данные пользователя
+        # ШАГ 1: Получаем данные из базы
         me = conn.execute('SELECT * FROM users WHERE username = ?', (session['user'],)).fetchone()
     
     if not me:
         return redirect(url_for('login'))
         
-    # 2. ПЕРЕДАЕМ 'me' В ШАБЛОН (это самое важное!)
+    # ШАГ 2: ПЕРЕДАЕМ 'me' В HTML. Проверь, чтобы было написано именно me=me
     return render_template('index.html', username=session['user'], me=me)
 
 @app.route('/register', methods=['GET', 'POST'])
@@ -90,6 +89,7 @@ if __name__ == '__main__':
     init_db() #
     port = int(os.environ.get("PORT", 5000))
     socketio.run(app, host='0.0.0.0', port=port)
+
 
 
 
