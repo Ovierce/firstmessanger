@@ -1,25 +1,21 @@
 <!DOCTYPE html>
 <html>
 <head>
-    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>Вход</title>
     <style>
-        body { font-family: sans-serif; background: #9db2bf; display: flex; justify-content: center; align-items: center; height: 100vh; margin: 0; }
-        .card { background: white; padding: 30px; border-radius: 20px; box-shadow: 0 4px 15px rgba(0,0,0,0.2); text-align: center; width: 300px; }
-        input { width: 100%; padding: 12px; margin: 10px 0; border: 1px solid #ddd; border-radius: 10px; box-sizing: border-box; }
-        button { width: 100%; padding: 12px; background: #3390ec; color: white; border: none; border-radius: 10px; cursor: pointer; font-weight: bold; }
-        a { color: #3390ec; text-decoration: none; font-size: 14px; }
+        body { display: flex; justify-content: center; align-items: center; height: 100vh; background: #f0f2f5; }
+        form { background: white; padding: 30px; border-radius: 10px; box-shadow: 0 4px 6px rgba(0,0,0,0.1); display: flex; flex-direction: column; gap: 15px; }
+        input { padding: 10px; width: 250px; border: 1px solid #ddd; border-radius: 5px; }
+        button { padding: 10px; background: #0084ff; color: white; border: none; border-radius: 5px; cursor: pointer; }
     </style>
 </head>
 <body>
-    <div class="card">
-        <h2>Messenger</h2>
-        {% with m = get_flashed_messages() %}{% if m %}<p style="color:red">{{m[0]}}</p>{% endif %}{% endwith %}
-        <form method="POST">
-            <input type="text" name="username" placeholder="Логин" required>
-            <input type="password" name="password" placeholder="Пароль" required>
-            <button type="submit">Войти</button>
-        </form>
-        <p><a href="/register">Создать аккаунт</a></p>
-    </div>
+    <form method="POST">
+        <h2>Вход в мессенджер</h2>
+        <input type="text" name="username" placeholder="Логин" required>
+        <input type="password" name="password" placeholder="Пароль" required>
+        <button type="submit">Войти</button>
+        <a href="/register">Нет аккаунта? Регистрация</a>
+    </form>
 </body>
 </html>
