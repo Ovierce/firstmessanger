@@ -1,8 +1,9 @@
 import eventlet
-eventlet.monkey_patch()  # СТРОГО ПЕРВАЯ СТРОКА!
+eventlet.monkey_patch() #
 
 import os
 import sqlite3
+# Только ПОСЛЕ патча идут остальные импорты!
 from flask import Flask, render_template, request, session, redirect, url_for, flash
 from flask_socketio import SocketIO, emit, join_room
 from werkzeug.security import generate_password_hash, check_password_hash
@@ -143,6 +144,7 @@ def user_info(data):
 if __name__ == '__main__':
     init_db()
     socketio.run(app, host='0.0.0.0', port=5000)
+
 
 
 
