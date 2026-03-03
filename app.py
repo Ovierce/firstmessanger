@@ -6,9 +6,16 @@ import sqlite3
 from flask import Flask, render_template, request, session, redirect, url_for, flash
 from flask_socketio import SocketIO, emit, join_room
 from werkzeug.security import generate_password_hash, check_password_hash
+from werkzeug.utils import secure_filename
 
 app = Flask(__name__)
 app.config['SECRET_KEY'] = os.environ.get("SECRET_KEY", "tg-clone-secret-key")
+
+# Настройка для загрузки файлов
+UPLOAD_FOLDER = 'static/uploads'
+app.config['UPLOAD_FOLDER'] = UPLOAD_FOLDER
+os.makedirs(UPLOAD_FOLDER, exist_ok=True) # Создаем папку, если её нет
+ALLOWED_EXTENSIONS = {'png', 'jpg', 'jpeg', 'gif'}
 
 socketio = SocketIO(app, cors_allowed_origins="*", async_mode='eventlet', ping_timeout=60)
 DATABASE = 'chat.db'
@@ -20,11 +27,9 @@ def get_db():
 
 def init_db():
     with get_db() as conn:
-        # Добавили bio (о себе)
         conn.execute('''CREATE TABLE IF NOT EXISTS users 
             (id INTEGER PRIMARY KEY AUTOINCREMENT, username TEXT UNIQUE, password TEXT, 
              avatar TEXT DEFAULT '👤', bio TEXT DEFAULT '', theme TEXT DEFAULT 'light')''')
-        # recipient: если NULL - общий чат, если текст - ник получателя (ЛС)
         conn.execute('''CREATE TABLE IF NOT EXISTS messages 
             (id INTEGER PRIMARY KEY AUTOINCREMENT, sender TEXT, recipient TEXT, 
              message TEXT, timestamp DATETIME DEFAULT CURRENT_TIMESTAMP)''')
@@ -32,11 +37,14 @@ def init_db():
 
 init_db()
 
+def allowed_file(filename):
+    return '.' in filename and filename.rsplit('.', 1)[1].lower() in ALLOWED_EXTENSIONS
+
 @app.route('/')
 def index():
     if 'user' not in session: return redirect(url_for('login'))
     
-    current_chat = request.args.get('chat') # Узнаем, какой чат открыт
+    current_chat = request.args.get('chat')
     
     with get_db() as conn:
         me = conn.execute('SELECT * FROM users WHERE username = ?', (session['user'],)).fetchone()
@@ -46,7 +54,6 @@ def index():
             
         users = conn.execute('SELECT username, avatar, bio FROM users WHERE username != ?', (session['user'],)).fetchall()
         
-        # Загрузка сообщений в зависимости от выбранного чата
         if current_chat:
             messages = conn.execute('''
                 SELECT * FROM messages 
@@ -61,18 +68,36 @@ def index():
             
     return render_template('index.html', me=me, users=users, messages=messages, curr_group=curr_group)
 
-@app.route('/update_profile', methods=['POST'])
-def update_profile():
+# НОВЫЙ РОУТ ДЛЯ ПРОФИЛЯ
+@app.route('/profile', methods=['GET', 'POST'])
+def profile():
     if 'user' not in session: return redirect(url_for('login'))
-    avatar = request.form.get('avatar', '👤')
-    bio = request.form.get('bio', '')
-    theme = request.form.get('theme', 'light')
     
     with get_db() as conn:
-        conn.execute('UPDATE users SET avatar = ?, bio = ?, theme = ? WHERE username = ?', 
-                     (avatar, bio, theme, session['user']))
-        conn.commit()
-    return redirect(url_for('index', chat=request.args.get('chat')))
+        me = conn.execute('SELECT * FROM users WHERE username = ?', (session['user'],)).fetchone()
+    
+    if request.method == 'POST':
+        bio = request.form.get('bio', '')
+        theme = request.form.get('theme', 'light')
+        avatar_val = me['avatar'] # По умолчанию оставляем старый
+        
+        # Проверяем, загрузил ли пользователь файл
+        file = request.files.get('avatar_file')
+        if file and allowed_file(file.filename):
+            ext = file.filename.rsplit('.', 1)[1].lower()
+            # Называем файл именем пользователя, чтобы не плодить дубликаты
+            filename = secure_filename(f"{session['user']}_avatar.{ext}")
+            file.save(os.path.join(app.config['UPLOAD_FOLDER'], filename))
+            # Сохраняем путь к файлу в базу данных
+            avatar_val = f"/{app.config['UPLOAD_FOLDER']}/{filename}"
+        
+        with get_db() as conn:
+            conn.execute('UPDATE users SET avatar = ?, bio = ?, theme = ? WHERE username = ?', 
+                         (avatar_val, bio, theme, session['user']))
+            conn.commit()
+        return redirect(url_for('index'))
+        
+    return render_template('profile.html', me=me)
 
 @app.route('/register', methods=['GET', 'POST'])
 def register():
@@ -108,7 +133,7 @@ def logout():
 @socketio.on('connect')
 def handle_connect():
     if 'user' in session:
-        join_room(session['user']) # Пользователь заходит в свою "комнату" для ЛС
+        join_room(session['user'])
 
 @socketio.on('send_msg')
 def handle_msg(data):
@@ -116,15 +141,13 @@ def handle_msg(data):
     if not sender: return
     
     msg = data.get('message')
-    recipient = data.get('recipient') # 'global' или 'Username'
-    
+    recipient = data.get('recipient')
     db_recipient = None if recipient == 'global' else recipient
     
     with get_db() as conn:
         conn.execute('INSERT INTO messages (sender, recipient, message) VALUES (?, ?, ?)', (sender, db_recipient, msg))
         conn.commit()
     
-    # Отправляем сообщение
     out_data = {'sender': sender, 'message': msg, 'recipient': recipient}
     
     if db_recipient:
