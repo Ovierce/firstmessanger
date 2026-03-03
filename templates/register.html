@@ -1,95 +1,21 @@
 <!DOCTYPE html>
-<html lang="ru">
+<html>
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Регистрация в Messenger</title>
+    <title>Регистрация</title>
     <style>
-        body { 
-            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; 
-            background: #9db2bf; /* Тот же цвет, что и для входа */
-            display: flex; 
-            justify-content: center; 
-            align-items: center; 
-            height: 100vh; 
-            margin: 0; 
-        }
-        .card { 
-            background: white; 
-            padding: 30px; 
-            border-radius: 20px; 
-            box-shadow: 0 10px 25px rgba(0,0,0,0.2); 
-            text-align: center; 
-            width: 100%;
-            max-width: 320px; 
-        }
-        h2 { 
-            color: #333; 
-            margin-bottom: 20px; 
-        }
-        input { 
-            width: 100%; 
-            padding: 12px; 
-            margin: 10px 0; 
-            border: 1px solid #ddd; 
-            border-radius: 10px; 
-            box-sizing: border-box; 
-            outline: none;
-            transition: 0.3s;
-        }
-        input:focus {
-            border-color: #3390ec;
-        }
-        button { 
-            width: 100%; 
-            padding: 12px; 
-            background: #3390ec; 
-            color: white; 
-            border: none; 
-            border-radius: 10px; 
-            cursor: pointer; 
-            font-weight: bold; 
-            font-size: 16px;
-            margin-top: 10px;
-        }
-        button:hover {
-            background: #2b78c5;
-        }
-        .error-msg {
-            color: #e74c3c;
-            font-size: 14px;
-            margin-bottom: 10px;
-        }
-        a { 
-            color: #3390ec; 
-            text-decoration: none; 
-            font-size: 14px; 
-        }
-        p {
-            margin-top: 20px;
-            color: #666;
-        }
+        body { display: flex; justify-content: center; align-items: center; height: 100vh; background: #f0f2f5; }
+        form { background: white; padding: 30px; border-radius: 10px; box-shadow: 0 4px 6px rgba(0,0,0,0.1); display: flex; flex-direction: column; gap: 15px; }
+        input { padding: 10px; width: 250px; border: 1px solid #ddd; border-radius: 5px; }
+        button { padding: 10px; background: #28a745; color: white; border: none; border-radius: 5px; cursor: pointer; }
     </style>
 </head>
 <body>
-    <div class="card">
+    <form method="POST">
         <h2>Регистрация</h2>
-        
-        {% with messages = get_flashed_messages() %}
-          {% if messages %}
-            <div class="error-msg">{{ messages[0] }}</div>
-          {% endif %}
-        {% endwith %}
-
-        <form method="POST" action="/register">
-            <input type="text" name="username" placeholder="Придумайте логин" required>
-            <input type="password" name="password" placeholder="Придумайте пароль" required>
-            <button type="submit">Создать аккаунт</button>
-        </form>
-
-        <p>Уже есть аккаунт? <br>
-            <a href="/">Вернуться ко входу</a>
-        </p>
-    </div>
+        <input type="text" name="username" placeholder="Логин" required>
+        <input type="password" name="password" placeholder="Пароль" required>
+        <button type="submit">Создать аккаунт</button>
+        <a href="/login">Уже есть аккаунт? Войти</a>
+    </form>
 </body>
 </html>
