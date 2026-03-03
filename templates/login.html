@@ -1,21 +1,36 @@
 <!DOCTYPE html>
 <html>
 <head>
-    <title>Вход</title>
+    <title>Вход | Webgram</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1">
     <style>
-        body { display: flex; justify-content: center; align-items: center; height: 100vh; background: #f0f2f5; }
-        form { background: white; padding: 30px; border-radius: 10px; box-shadow: 0 4px 6px rgba(0,0,0,0.1); display: flex; flex-direction: column; gap: 15px; }
-        input { padding: 10px; width: 250px; border: 1px solid #ddd; border-radius: 5px; }
-        button { padding: 10px; background: #0084ff; color: white; border: none; border-radius: 5px; cursor: pointer; }
+        body { font-family: -apple-system, sans-serif; background: #e6ebeb; display: flex; justify-content: center; align-items: center; height: 100vh; margin: 0; }
+        .auth-box { background: white; padding: 40px; border-radius: 12px; box-shadow: 0 10px 30px rgba(0,0,0,0.1); width: 100%; max-width: 360px; text-align: center; }
+        .logo { width: 80px; height: 80px; background: linear-gradient(135deg, #3390ec, #00c6ff); border-radius: 50%; display: flex; align-items: center; justify-content: center; color: white; font-size: 40px; margin: 0 auto 20px; }
+        h2 { margin-bottom: 25px; color: #333; }
+        input { width: 100%; box-sizing: border-box; padding: 14px; margin-bottom: 15px; border: 1px solid #ddd; border-radius: 8px; font-size: 15px; background: #f9f9f9; }
+        button { width: 100%; padding: 14px; background: #3390ec; color: white; border: none; border-radius: 8px; font-size: 16px; font-weight: 600; cursor: pointer; transition: background 0.2s; }
+        button:hover { background: #2880d6; }
+        .links { margin-top: 20px; font-size: 14px; }
+        a { color: #3390ec; text-decoration: none; }
+        .flash { color: #e53935; font-size: 14px; margin-bottom: 15px; }
     </style>
 </head>
 <body>
-    <form method="POST">
-        <h2>Вход в мессенджер</h2>
-        <input type="text" name="username" placeholder="Логин" required>
-        <input type="password" name="password" placeholder="Пароль" required>
-        <button type="submit">Войти</button>
-        <a href="/register">Нет аккаунта? Регистрация</a>
-    </form>
+    <div class="auth-box">
+        <div class="logo">✈️</div>
+        <h2>Вход в Webgram</h2>
+        {% with messages = get_flashed_messages() %}
+            {% if messages %}<div class="flash">{{ messages[0] }}</div>{% endif %}
+        {% endwith %}
+        <form method="POST">
+            <input type="text" name="username" placeholder="Ваш никнейм" required autocomplete="off">
+            <input type="password" name="password" placeholder="Пароль" required>
+            <button type="submit">Войти</button>
+        </form>
+        <div class="links">
+            <a href="/register">Создать аккаунт</a>
+        </div>
+    </div>
 </body>
 </html>
