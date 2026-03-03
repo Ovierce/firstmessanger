@@ -1,0 +1,273 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Профиль | {{ user.username }}</title>
+    <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
+    <style>
+        :root {
+            --blue: #3390ec;
+            --bg: #f5f0e6;
+            --white: #ffffff;
+            --text-main: #000000;
+            --text-gray: #707579;
+        }
+        /* Поддержка темной темы из системы или localStorage */
+        body.dark {
+            --bg: #181818;
+            --white: #212121;
+            --text-main: #ffffff;
+            --text-gray: #aaaaaa;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+            background-color: var(--bg);
+            color: var(--text-main);
+            margin: 0;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            height: 100vh;
+        }
+
+        .profile-card {
+            background: var(--white);
+            width: 100%;
+            max-width: 400px;
+            border-radius: 20px;
+            box-shadow: 0 4px 20px rgba(0,0,0,0.1);
+            overflow: hidden;
+            position: relative;
+        }
+
+        .header-back {
+            padding: 15px;
+            display: flex;
+            align-items: center;
+            gap: 15px;
+            cursor: pointer;
+            border-bottom: 1px solid rgba(0,0,0,0.05);
+        }
+
+        .header-back a {
+            text-decoration: none;
+            color: var(--blue);
+            font-weight: bold;
+        }
+
+        .profile-info {
+            padding: 30px;
+            text-align: center;
+        }
+
+        .avatar-container {
+            position: relative;
+            display: inline-block;
+            margin-bottom: 20px;
+        }
+
+        .avatar-main {
+            width: 120px;
+            height: 120px;
+            border-radius: 50%;
+            object-fit: cover;
+            border: 3px solid var(--white);
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+            background-color: var(--blue);
+        }
+
+        .edit-overlay {
+            position: absolute;
+            bottom: 5px;
+            right: 5px;
+            background: var(--blue);
+            border-radius: 50%;
+            width: 35px;
+            height: 35px;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            cursor: pointer;
+            border: 2px solid var(--white);
+        }
+
+        .username {
+            font-size: 24px;
+            font-weight: bold;
+            margin: 0 0 5px 0;
+        }
+
+        .bio-text {
+            color: var(--text-gray);
+            font-size: 15px;
+            margin-bottom: 25px;
+            line-height: 1.4;
+        }
+
+        .action-btn {
+            display: block;
+            width: 100%;
+            padding: 12px;
+            background-color: var(--blue);
+            color: white;
+            border: none;
+            border-radius: 10px;
+            font-size: 16px;
+            font-weight: bold;
+            cursor: pointer;
+            text-decoration: none;
+            margin-bottom: 10px;
+            box-sizing: border-box;
+            text-align: center;
+        }
+
+        .action-btn.secondary {
+            background-color: transparent;
+            color: var(--blue);
+            border: 1px solid var(--blue);
+        }
+
+        /* Поля редактирования */
+        .edit-form {
+            display: none;
+            margin-top: 20px;
+            text-align: left;
+        }
+
+        .input-label {
+            display: block;
+            font-size: 13px;
+            color: var(--blue);
+            margin-bottom: 5px;
+            font-weight: bold;
+        }
+
+        textarea {
+            width: 100%;
+            border: 1px solid #ddd;
+            border-radius: 8px;
+            padding: 10px;
+            font-family: inherit;
+            resize: none;
+            box-sizing: border-box;
+            background: var(--bg);
+            color: var(--text-main);
+        }
+
+        #file-input { display: none; }
+    </style>
+</head>
+<body>
+
+<div class="profile-card">
+    <div class="header-back">
+        <a href="/">← Назад</a>
+        <span style="font-weight:bold;">Информация</span>
+    </div>
+
+    <div class="profile-info">
+        <div class="avatar-container">
+            <img src="{{ user.avatar if user.avatar else 'https://ui-avatars.com/api/?name=' + user.username + '&size=200' }}" 
+                 id="avatar-preview" class="avatar-main">
+            
+            {% if is_me %}
+            <label for="file-input" class="edit-overlay">
+                <span style="color:white; font-size: 18px;">📷</span>
+            </label>
+            <input type="file" id="file-input" accept="image/*">
+            {% endif %}
+        </div>
+
+        <h1 class="username">{{ user.username }}</h1>
+        <p class="bio-text" id="bio-display">{{ user.bio }}</p>
+
+        {% if is_me %}
+            <button class="action-btn" id="edit-toggle">Изменить профиль</button>
+            
+            <form action="/edit-profile" method="POST" class="edit-form" id="main-edit-form">
+                <span class="input-label">О себе (Bio)</span>
+                <textarea name="bio" rows="3">{{ user.bio }}</textarea>
+                
+                <input type="hidden" name="avatar_data" id="avatar-data-hidden" value="{{ user.avatar }}">
+                
+                <button type="submit" class="action-btn" style="margin-top: 15px;">Сохранить изменения</button>
+                <button type="button" class="action-btn secondary" id="cancel-edit">Отмена</button>
+            </form>
+        {% else %}
+            <a href="/create-private/{{ user.username }}" class="action-btn">Написать сообщение</a>
+        {% endif %}
+    </div>
+</div>
+
+<script>
+    // Применяем тему из настроек мессенджера
+    if (localStorage.getItem('theme') === 'dark') {
+        document.body.classList.add('dark');
+    }
+
+    // Логика переключения режима редактирования
+    $('#edit-toggle').click(function() {
+        $(this).hide();
+        $('#bio-display').hide();
+        $('#main-edit-form').fadeIn();
+    });
+
+    $('#cancel-edit').click(function() {
+        $('#main-edit-form').hide();
+        $('#edit-toggle').show();
+        $('#bio-display').show();
+    });
+
+    // Обработка загрузки аватара (Base64)
+  $('#file-input, #ava-pick').change(function(e) {
+    const file = e.target.files[0];
+    if (!file) return;
+
+    const reader = new FileReader();
+    reader.onload = function(event) {
+        const img = new Image();
+        img.onload = function() {
+            // Создаем виртуальный холст для перерисовки
+            const canvas = document.createElement('canvas');
+            const MAX_WIDTH = 400;
+            const MAX_HEIGHT = 400;
+            let width = img.width;
+            let height = img.height;
+
+            // Расчет пропорций
+            if (width > height) {
+                if (width > MAX_WIDTH) {
+                    height *= MAX_WIDTH / width;
+                    width = MAX_WIDTH;
+                }
+            } else {
+                if (height > MAX_HEIGHT) {
+                    width *= MAX_HEIGHT / height;
+                    height = MAX_HEIGHT;
+                }
+            }
+
+            canvas.width = width;
+            canvas.height = height;
+            const ctx = canvas.getContext('2d');
+            ctx.drawImage(img, 0, 0, width, height);
+
+            // Превращаем в сжатый JPEG (качество 0.7 = 70%)
+            const dataUrl = canvas.toDataURL('image/jpeg', 0.7);
+            
+            // Обновляем превью и скрытое поле
+            $('#p-view-ava, #avatar-preview').attr('src', dataUrl);
+            $('#av_hidden, #avatar-data-hidden').val(dataUrl);
+            
+            console.log("Картинка сжата и готова к отправке!");
+        };
+        img.src = event.target.result;
+    };
+    reader.readAsDataURL(file);
+});
+</script>
+
+</body>
+</html>
