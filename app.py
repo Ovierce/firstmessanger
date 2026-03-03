@@ -1,5 +1,5 @@
 import eventlet
-eventlet.monkey_patch()  # ПЕРВАЯ СТРОКА
+eventlet.monkey_patch()
 
 import os
 import sqlite3
@@ -8,7 +8,7 @@ from flask_socketio import SocketIO, emit
 from werkzeug.security import generate_password_hash, check_password_hash
 
 app = Flask(__name__)
-app.config['SECRET_KEY'] = os.environ.get("SECRET_KEY", "dev-key-123")
+app.config['SECRET_KEY'] = os.environ.get("SECRET_KEY", "danger-chat-key")
 app.config['MAX_CONTENT_LENGTH'] = 16 * 1024 * 1024
 
 socketio = SocketIO(app, 
@@ -25,7 +25,6 @@ def get_db():
     return conn
 
 def init_db():
-    """Создает таблицы, если их нет"""
     with get_db() as conn:
         conn.execute('''CREATE TABLE IF NOT EXISTS users 
             (id INTEGER PRIMARY KEY AUTOINCREMENT, username TEXT UNIQUE, password TEXT, avatar TEXT)''')
@@ -33,7 +32,6 @@ def init_db():
             (id INTEGER PRIMARY KEY AUTOINCREMENT, username TEXT, message TEXT, timestamp DATETIME DEFAULT CURRENT_TIMESTAMP)''')
         conn.commit()
 
-# ВАЖНО: Вызываем создание базы данных ЗДЕСЬ, а не в самом низу!
 init_db()
 
 @app.route('/')
@@ -43,12 +41,22 @@ def index():
     
     with get_db() as conn:
         me = conn.execute('SELECT * FROM users WHERE username = ?', (session['user'],)).fetchone()
+        # Загружаем историю сообщений, чтобы они были видны при входе
+        messages = conn.execute('SELECT * FROM messages ORDER BY timestamp ASC').fetchall()
     
     if not me:
         session.pop('user', None)
         return redirect(url_for('login'))
+    
+    # ИСПРАВЛЕНИЕ ОШИБКИ 'curr_group' is undefined:
+    # Создаем фиктивный объект группы, который требует твой index.html
+    curr_group = {'id': 'global', 'name': 'Общий чат'}
         
-    return render_template('index.html', username=session['user'], me=me)
+    return render_template('index.html', 
+                           username=session['user'], 
+                           me=me, 
+                           messages=messages,
+                           curr_group=curr_group) # Передаем группу в шаблон
 
 @app.route('/register', methods=['GET', 'POST'])
 def register():
@@ -92,7 +100,6 @@ def handle_message(data):
 if __name__ == '__main__':
     port = int(os.environ.get("PORT", 5000))
     socketio.run(app, host='0.0.0.0', port=port)
-
 
 
 
