@@ -1,5 +1,5 @@
 import eventlet
-eventlet.monkey_patch()  # Должно быть первой строкой!
+eventlet.monkey_patch()  # ПЕРВАЯ СТРОКА
 
 import os
 import sqlite3
@@ -8,7 +8,7 @@ from flask_socketio import SocketIO, emit
 from werkzeug.security import generate_password_hash, check_password_hash
 
 app = Flask(__name__)
-app.config['SECRET_KEY'] = 'your-very-secret-key'
+app.config['SECRET_KEY'] = os.environ.get("SECRET_KEY", "dev-key-123")
 app.config['MAX_CONTENT_LENGTH'] = 16 * 1024 * 1024
 
 socketio = SocketIO(app, 
@@ -25,32 +25,36 @@ def get_db():
     return conn
 
 def init_db():
+    """Создает таблицы, если их нет"""
     with get_db() as conn:
         conn.execute('''CREATE TABLE IF NOT EXISTS users 
             (id INTEGER PRIMARY KEY AUTOINCREMENT, username TEXT UNIQUE, password TEXT, avatar TEXT)''')
         conn.execute('''CREATE TABLE IF NOT EXISTS messages 
             (id INTEGER PRIMARY KEY AUTOINCREMENT, username TEXT, message TEXT, timestamp DATETIME DEFAULT CURRENT_TIMESTAMP)''')
         conn.commit()
+
+# ВАЖНО: Вызываем создание базы данных ЗДЕСЬ, а не в самом низу!
+init_db()
+
 @app.route('/')
 def index():
     if 'user' not in session:
         return redirect(url_for('login'))
     
     with get_db() as conn:
-        # ШАГ 1: Получаем данные из базы
         me = conn.execute('SELECT * FROM users WHERE username = ?', (session['user'],)).fetchone()
     
     if not me:
+        session.pop('user', None)
         return redirect(url_for('login'))
         
-    # ШАГ 2: ПЕРЕДАЕМ 'me' В HTML. Проверь, чтобы было написано именно me=me
     return render_template('index.html', username=session['user'], me=me)
 
 @app.route('/register', methods=['GET', 'POST'])
 def register():
     if request.method == 'POST':
-        u = request.form.get('username').strip()
-        p = request.form.get('password')
+        u = request.form.get('username', '').strip()
+        p = request.form.get('password', '')
         if u and p:
             try:
                 with get_db() as conn:
@@ -86,13 +90,8 @@ def handle_message(data):
         emit('receive_message', {'username': user, 'message': msg}, broadcast=True)
 
 if __name__ == '__main__':
-    init_db() #
     port = int(os.environ.get("PORT", 5000))
     socketio.run(app, host='0.0.0.0', port=port)
-
-
-
-
 
 
 
