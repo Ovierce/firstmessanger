@@ -37,15 +37,15 @@ def index():
     if 'user' not in session:
         return redirect(url_for('login'))
     
-    # ИСПРАВЛЕНИЕ ОШИБКИ 'me' is undefined:
     with get_db() as conn:
+        # 1. Получаем данные пользователя
         me = conn.execute('SELECT * FROM users WHERE username = ?', (session['user'],)).fetchone()
     
     if not me:
-        session.pop('user', None)
         return redirect(url_for('login'))
         
-    return render_template('index.html', username=session['user'], me=me) # Передаем me в шаблон
+    # 2. ПЕРЕДАЕМ 'me' В ШАБЛОН (это самое важное!)
+    return render_template('index.html', username=session['user'], me=me)
 
 @app.route('/register', methods=['GET', 'POST'])
 def register():
@@ -90,6 +90,7 @@ if __name__ == '__main__':
     init_db() #
     port = int(os.environ.get("PORT", 5000))
     socketio.run(app, host='0.0.0.0', port=port)
+
 
 
 
