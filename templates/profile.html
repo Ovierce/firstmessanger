@@ -5,70 +5,230 @@
     <meta name="viewport" content="width=device-width, initial-scale=1">
     <title>Настройки профиля | Webgram</title>
     <style>
+        /* Переменные темы (поддерживают светлый и темный режим) */
         :root {
-            --bg-body: #e6ebeb; --bg-panel: #ffffff; --primary: #3390ec; 
-            --text-main: #000000; --text-muted: #707579; --border: #dfe1e5;
+            --bg-body: #e6ebeb;
+            --bg-panel: #ffffff;
+            --primary: #3390ec;
+            --text-main: #000000;
+            --text-muted: #707579;
+            --border: #dfe1e5;
+            --input-bg: #f1f1f1;
         }
+
         [data-theme="dark"] {
-            --bg-body: #0f0f0f; --bg-panel: #212121; --primary: #8774e1; 
-            --text-main: #ffffff; --text-muted: #aaaaaa; --border: #303030;
+            --bg-body: #0f0f0f;
+            --bg-panel: #212121;
+            --primary: #8774e1;
+            --text-main: #ffffff;
+            --text-muted: #aaaaaa;
+            --border: #303030;
+            --input-bg: #2c2c2c;
         }
 
-        body { font-family: -apple-system, sans-serif; background: var(--bg-body); color: var(--text-main); margin: 0; display: flex; justify-content: center; align-items: center; height: 100vh; }
-        .profile-card { background: var(--bg-panel); width: 100%; max-width: 400px; padding: 30px; border-radius: 12px; box-shadow: 0 10px 30px rgba(0,0,0,0.1); text-align: center; }
-        
-        .avatar-preview { width: 120px; height: 120px; border-radius: 50%; object-fit: cover; background: linear-gradient(135deg, #3390ec, #00c6ff); display: flex; align-items: center; justify-content: center; font-size: 50px; color: white; margin: 0 auto 20px; border: 3px solid var(--border); }
-        
-        h2 { margin-bottom: 5px; }
-        .username { color: var(--text-muted); margin-bottom: 20px; font-size: 15px; }
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+            transition: background 0.3s, color 0.3s;
+        }
 
-        .form-group { text-align: left; margin-bottom: 15px; }
-        label { display: block; font-size: 13px; color: var(--text-muted); margin-bottom: 5px; }
-        input[type="text"], select, input[type="file"] { width: 100%; box-sizing: border-box; padding: 12px; border-radius: 8px; border: 1px solid var(--border); background: var(--bg-body); color: var(--text-main); outline: none; }
-        input[type="file"] { padding: 8px; cursor: pointer; }
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+            background: var(--bg-body);
+            color: var(--text-main);
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            min-height: 100vh;
+        }
 
-        .btn-save { width: 100%; padding: 14px; background: var(--primary); color: white; border: none; border-radius: 8px; font-size: 16px; font-weight: 600; cursor: pointer; margin-top: 10px; }
-        .btn-back { display: block; margin-top: 15px; color: var(--primary); text-decoration: none; font-size: 14px; }
-        .btn-logout { display: block; margin-top: 20px; color: #e53935; text-decoration: none; font-size: 14px; font-weight: 600; border-top: 1px solid var(--border); padding-top: 15px; }
+        .profile-card {
+            background: var(--bg-panel);
+            width: 100%;
+            max-width: 420px;
+            padding: 40px 30px;
+            border-radius: 20px;
+            box-shadow: 0 10px 40px rgba(0,0,0,0.15);
+            text-align: center;
+        }
+
+        /* Контейнер аватара */
+        .avatar-section {
+            position: relative;
+            width: 120px;
+            height: 120px;
+            margin: 0 auto 20px;
+        }
+
+        .avatar-preview {
+            width: 120px;
+            height: 120px;
+            border-radius: 50%;
+            object-fit: cover;
+            background: linear-gradient(135deg, #3390ec, #00c6ff);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 50px;
+            color: white;
+            border: 4px solid var(--bg-panel);
+            box-shadow: 0 4px 10px rgba(0,0,0,0.1);
+        }
+
+        h2 {
+            font-size: 22px;
+            margin-bottom: 5px;
+        }
+
+        .username-tag {
+            color: var(--primary);
+            font-weight: 500;
+            margin-bottom: 25px;
+            display: block;
+        }
+
+        /* Форма */
+        .settings-form {
+            text-align: left;
+        }
+
+        .form-group {
+            margin-bottom: 20px;
+        }
+
+        label {
+            display: block;
+            font-size: 13px;
+            font-weight: 600;
+            color: var(--text-muted);
+            margin-bottom: 8px;
+            margin-left: 5px;
+        }
+
+        input[type="text"], 
+        select, 
+        input[type="file"] {
+            width: 100%;
+            padding: 12px 16px;
+            border-radius: 12px;
+            border: 1px solid var(--border);
+            background: var(--input-bg);
+            color: var(--text-main);
+            font-size: 15px;
+            outline: none;
+        }
+
+        input:focus {
+            border-color: var(--primary);
+        }
+
+        /* Кнопки */
+        .btn-save {
+            width: 100%;
+            padding: 14px;
+            background: var(--primary);
+            color: white;
+            border: none;
+            border-radius: 12px;
+            font-size: 16px;
+            font-weight: 600;
+            cursor: pointer;
+            margin-top: 10px;
+            box-shadow: 0 4px 12px rgba(51, 144, 236, 0.3);
+        }
+
+        .btn-save:hover {
+            opacity: 0.9;
+        }
+
+        .btn-back {
+            display: inline-block;
+            margin-top: 20px;
+            color: var(--text-muted);
+            text-decoration: none;
+            font-size: 14px;
+            transition: color 0.2s;
+        }
+
+        .btn-back:hover {
+            color: var(--primary);
+        }
+
+        .logout-section {
+            margin-top: 30px;
+            padding-top: 20px;
+            border-top: 1px solid var(--border);
+        }
+
+        .btn-logout {
+            color: #ff595a;
+            text-decoration: none;
+            font-size: 15px;
+            font-weight: 600;
+        }
+
+        /* Кастомизация input file */
+        input[type="file"]::-webkit-file-upload-button {
+            background: var(--primary);
+            border: none;
+            color: white;
+            padding: 5px 10px;
+            border-radius: 5px;
+            margin-right: 10px;
+            cursor: pointer;
+        }
     </style>
 </head>
 <body data-theme="{{ me.theme }}">
 
     <div class="profile-card">
-        {% if '/' in me.avatar %}
-            <img src="{{ me.avatar }}" class="avatar-preview" alt="Avatar">
-        {% else %}
-            <div class="avatar-preview">{{ me.avatar }}</div>
-        {% endif %}
+        <div class="avatar-section">
+            {% if '/' in me.avatar %}
+                <img src="{{ me.avatar }}" class="avatar-preview" alt="User Photo">
+            {% else %}
+                <div class="avatar-preview">{{ me.avatar }}</div>
+            {% endif %}
+        </div>
 
         <h2>{{ me.username }}</h2>
-        <div class="username">@{{ me.username }}</div>
+        <span class="username-tag">@{{ me.username }}</span>
 
-        <form action="/profile" method="POST" enctype="multipart/form-data">
+        <form action="/profile" method="POST" enctype="multipart/form-data" class="settings-form">
             <div class="form-group">
-                <label>Загрузить новое фото профиля</label>
+                <label>Фото профиля</label>
                 <input type="file" name="avatar_file" accept="image/*">
             </div>
 
             <div class="form-group">
-                <label>О себе</label>
-                <input type="text" name="bio" value="{{ me.bio }}" placeholder="Расскажите немного о себе...">
+                <label>О себе (Bio)</label>
+                <input type="text" name="bio" value="{{ me.bio }}" placeholder="Расскажите о себе..." maxlength="100">
             </div>
 
             <div class="form-group">
-                <label>Тема оформления</label>
+                <label>Тема приложения</label>
                 <select name="theme">
-                    <option value="light" {% if me.theme == 'light' %}selected{% endif %}>Светлая</option>
-                    <option value="dark" {% if me.theme == 'dark' %}selected{% endif %}>Темная</option>
+                    <option value="light" {% if me.theme == 'light' %}selected{% endif %}>Светлая (Light)</option>
+                    <option value="dark" {% if me.theme == 'dark' %}selected{% endif %}>Темная (Dark)</option>
                 </select>
             </div>
 
-            <button type="submit" class="btn-save">Сохранить изменения</button>
+            <button type="submit" class="btn-save">Сохранить всё</button>
         </form>
 
-        <a href="/" class="btn-back">← Назад в чаты</a>
-        <a href="/logout" class="btn-logout">Выйти из аккаунта</a>
+        <a href="/" class="btn-back">← Вернуться к чатам</a>
+
+        <div class="logout-section">
+            <a href="/logout" class="btn-logout">Выйти из аккаунта</a>
+        </div>
     </div>
 
+    <script>
+        // Небольшой скрипт для мгновенного превью темы при выборе в выпадающем списке
+        const themeSelect = document.querySelector('select[name="theme"]');
+        themeSelect.addEventListener('change', (e) => {
+            document.body.setAttribute('data-theme', e.target.value);
+        });
+    </script>
 </body>
 </html>
