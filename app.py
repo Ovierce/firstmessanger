@@ -1,11 +1,11 @@
 import eventlet
-eventlet.monkey_patch() #
+eventlet.monkey_patch()
 
 import os
 import sqlite3
-# Только ПОСЛЕ патча идут остальные импорты!
 from flask import Flask, render_template, request, session, redirect, url_for, flash
-from flask_socketio import SocketIO, emit, join_room
+from flask_socketio import SocketIO
+# ВОТ ЭТА СТРОКА ОБЯЗАТЕЛЬНА:
 from werkzeug.security import generate_password_hash, check_password_hash
 
 app = Flask(__name__)
@@ -144,6 +144,7 @@ def user_info(data):
 if __name__ == '__main__':
     init_db()
     socketio.run(app, host='0.0.0.0', port=5000)
+
 
 
 
