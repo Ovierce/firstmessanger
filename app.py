@@ -1,15 +1,13 @@
 import eventlet
-eventlet.monkey_patch()  # ЭТО ДОЛЖНО БЫТЬ ПЕРВОЙ СТРОКОЙ КОДА!
-
+eventlet.monkey_patch()
 import sqlite3, os, sys
 from flask import Flask, render_template, request, session, redirect, url_for, flash
 from flask_socketio import SocketIO, emit, join_room
 from werkzeug.security import generate_password_hash, check_password_hash
 
 app = Flask(__name__)
-app.config['SECRET_KEY'] = 'твой_ключ'
-app.config['MAX_CONTENT_LENGTH'] = 16 * 1024 * 1024  # Разрешаем 16МБ
-socketio = SocketIO(app, max_http_buffer_size=16 * 1024 * 1024) # Добавь этот параметр сюда!
+app.config['MAX_CONTENT_LENGTH'] = 16 * 1024 * 1024
+socketio = SocketIO(app, max_http_buffer_size=16 * 1024 * 1024)
 
 def get_db():
     conn = sqlite3.connect('chat.db')
@@ -46,13 +44,15 @@ def login():
 @app.route('/register', methods=['GET', 'POST'])
 def register():
     if request.method == 'POST':
-        u, p = request.form.get('username').strip(), generate_password_hash(request.form.get('password'))
+        u = request.form.get('username').strip()
+        p = generate_password_hash(request.form.get('password'))
         try:
             with get_db() as conn:
-                conn.execute('INSERT INTO users (username, password) VALUES (?,?)', (u,p))
+                conn.execute('INSERT INTO users (username, password) VALUES (?,?)', (u, p))
                 conn.commit()
             return redirect(url_for('login'))
-        except: flash('Никнейм занят')
+        except sqlite3.IntegrityError:
+            flash('Никнейм занят')
     return render_template('register.html')
 
 @app.route('/chat/<int:group_id>')
@@ -130,4 +130,5 @@ def user_info(data):
 if __name__ == '__main__':
     init_db()
     socketio.run(app, host='0.0.0.0', port=5000)
+
 
