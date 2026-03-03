@@ -1,3 +1,6 @@
+import eventlet
+eventlet.monkey_patch()  # ЭТО ДОЛЖНО БЫТЬ ПЕРВОЙ СТРОКОЙ КОДА!
+
 import sqlite3, os, sys
 from flask import Flask, render_template, request, session, redirect, url_for, flash
 from flask_socketio import SocketIO, emit, join_room
@@ -127,3 +130,4 @@ def user_info(data):
 if __name__ == '__main__':
     init_db()
     socketio.run(app, host='0.0.0.0', port=5000)
+
