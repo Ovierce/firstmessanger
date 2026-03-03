@@ -2,225 +2,102 @@
 <html lang="ru">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Messenger Pro</title>
+    <title>Super Messenger</title>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/socket.io/4.0.1/socket.io.js"></script>
-    <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
     <style>
-        :root { --blue: #3390ec; --bg: #f5f0e6; --white: #ffffff; --text: #000; --item-hover: #f1f1f1; --msg-mine: #eeffde; --msg-other: #fff; }
-        body.dark { --bg: #181818; --white: #212121; --text: #fff; --item-hover: #2c2c2c; --msg-mine: #2b5278; --msg-other: #212121; }
+        :root { --bg: #f4f4f9; --panel: white; --text: #333; --accent: #0084ff; }
+        [data-theme="dark"] { --bg: #1a1a1a; --panel: #2d2d2d; --text: #eee; --accent: #3a86ff; }
         
-        body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto; margin: 0; background: var(--bg); color: var(--text); display: flex; height: 100vh; overflow: hidden; }
+        body { background: var(--bg); color: var(--text); font-family: sans-serif; margin: 0; display: flex; height: 100vh; }
+        .sidebar { width: 250px; background: var(--panel); border-right: 1px solid #444; display: flex; flex-direction: column; }
+        .chat-area { flex: 1; display: flex; flex-direction: column; }
         
-        /* Сайдбар */
-        .sidebar { width: 300px; background: var(--white); border-right: 1px solid rgba(0,0,0,0.1); display: flex; flex-direction: column; }
-        .side-header { padding: 15px; display: flex; align-items: center; gap: 10px; border-bottom: 1px solid rgba(0,0,0,0.05); }
-        .chat-list { flex: 1; overflow-y: auto; }
-        .chat-item { padding: 12px 15px; cursor: pointer; border-bottom: 1px solid rgba(0,0,0,0.03); transition: 0.2s; }
-        .chat-item:hover { background: var(--item-hover); }
-        .chat-item.active { background: var(--blue); color: white; }
-
-        /* Чат */
-        #main-chat { flex: 1; display: flex; flex-direction: column; background: var(--bg); position: relative; }
-        #messages-container { flex: 1; overflow-y: auto; padding: 20px; display: flex; flex-direction: column; gap: 10px; }
+        .user-item { padding: 10px; cursor: pointer; border-bottom: 1px solid #eee; display: flex; align-items: center; gap: 10px; }
+        .user-item:hover { background: var(--accent); color: white; }
+        .avatar { width: 40px; height: 40px; border-radius: 50%; background: #ccc; display: flex; align-items: center; justify-content: center; font-size: 20px; }
         
-        .msg-line { display: flex; gap: 10px; align-items: flex-end; max-width: 75%; }
-        .msg-line.mine { align-self: flex-end; flex-direction: row-reverse; }
-        .msg-bubble { padding: 8px 12px; border-radius: 15px; background: var(--msg-other); box-shadow: 0 1px 2px rgba(0,0,0,0.1); position: relative; }
-        .mine .msg-bubble { background: var(--msg-mine); }
+        #messages { flex: 1; overflow-y: auto; padding: 20px; }
+        .msg { margin-bottom: 10px; padding: 10px; border-radius: 8px; background: var(--panel); max-width: 70%; }
+        .msg.my { align-self: flex-end; background: var(--accent); color: white; margin-left: auto; }
         
-        .ava-msg { width: 35px; height: 35px; border-radius: 50%; cursor: pointer; object-fit: cover; }
-        .u-name { font-weight: bold; color: var(--blue); cursor: pointer; font-size: 13px; }
-        .del-btn { color: #ff5e5e; font-size: 10px; cursor: pointer; margin-left: 8px; visibility: hidden; }
-        .msg-bubble:hover .del-btn { visibility: visible; }
-
-        /* Ввод */
-        .input-area { padding: 15px; background: var(--white); display: flex; gap: 10px; align-items: center; }
-        #m-input { flex: 1; padding: 10px 15px; border: 1px solid rgba(0,0,0,0.1); border-radius: 20px; outline: none; background: var(--bg); color: var(--text); }
-
-        /* Выезжающий профиль */
-        #profile-panel { width: 0; position: fixed; right: 0; top: 0; height: 100%; background: var(--white); transition: 0.3s; z-index: 100; box-shadow: -5px 0 20px rgba(0,0,0,0.2); overflow: hidden; }
-        #profile-panel.open { width: 320px; }
-        .p-info { padding: 30px; text-align: center; }
-        .p-ava-huge { width: 140px; height: 140px; border-radius: 50%; object-fit: cover; margin-bottom: 15px; }
-
-        .btn-ui { padding: 10px; background: var(--blue); color: white; border: none; border-radius: 8px; cursor: pointer; width: 100%; margin-top: 10px; }
-        #theme-toggle { cursor: pointer; font-size: 20px; margin-left: auto; }
+        .input-box { padding: 20px; background: var(--panel); display: flex; gap: 10px; }
+        input { flex: 1; padding: 10px; border-radius: 5px; border: 1px solid #ddd; }
+        button { padding: 10px 20px; background: var(--accent); color: white; border: none; border-radius: 5px; cursor: pointer; }
+        
+        .settings { padding: 10px; font-size: 12px; border-top: 1px solid #eee; }
     </style>
 </head>
-<body>
-
+<body data-theme="{{ me.theme }}">
     <div class="sidebar">
-        <div class="side-header">
-            <img src="{{ me.avatar if me.avatar else 'https://ui-avatars.com/api/?name='+me.username }}" class="ava-msg" onclick="openProfile('{{me.username}}')">
-            <b>{{ me.username }}</b>
-            <div id="theme-toggle">🌙</div>
-        </div>
-        <div class="chat-list">
-            {% for g in groups %}
-            <div class="chat-item {% if g.id == curr_group.id %}active{% endif %}" onclick="location.href='/chat/{{g.id}}'">
-                <div style="font-weight:bold">{{ g.name }}</div>
-                <div style="font-size:12px; opacity:0.7" id="side-last-{{g.id}}">{{ g.last_msg if g.last_msg else 'Нет сообщений' }}</div>
+        <div style="padding: 20px;"><h3>Чаты</h3></div>
+        <div class="user-item" onclick="setRecipient(null)"><b>🌍 Общий чат</b></div>
+        <div id="user-list">
+            {% for u in users %}
+            <div class="user-item" onclick="setRecipient('{{ u.username }}')">
+                <div class="avatar">{{ u.avatar }}</div> {{ u.username }}
             </div>
             {% endfor %}
         </div>
+        
+        <div class="settings">
+            <form action="/update_settings" method="POST">
+                Тема: <select name="theme" onchange="this.form.submit()">
+                    <option value="light" {% if me.theme == 'light' %}selected{% endif %}>Светлая</option>
+                    <option value="dark" {% if me.theme == 'dark' %}selected{% endif %}>Темная</option>
+                </select><br><br>
+                Аватар: <select name="avatar" onchange="this.form.submit()">
+                    <option value="🐱" {% if me.avatar == '🐱' %}selected{% endif %}>Кот</option>
+                    <option value="🐶" {% if me.avatar == '🐶' %}selected{% endif %}>Пес</option>
+                    <option value="👻" {% if me.avatar == '👻' %}selected{% endif %}>Призрак</option>
+                </select>
+            </form>
+            <p>Вы: {{ username }} <a href="/login" style="color: red;">Выход</a></p>
+        </div>
     </div>
 
-    <div id="main-chat">
-        <div id="messages-container">
-            {% for m in history %}
-            <div class="msg-line {{ 'mine' if m.username == me.username else '' }}" id="msg-{{m.id}}">
-                <img src="{{ m.avatar if m.avatar else 'https://ui-avatars.com/api/?name='+m.username }}" class="ava-msg" onclick="openProfile('{{m.username}}')">
-                <div class="msg-bubble">
-                    {% if m.username != me.username %}
-                        <div class="u-name" onclick="openProfile('{{m.username}}')">{{ m.username }}</div>
-                    {% endif %}
-                    {{ m.content }}
-                    {% if m.username == me.username %}
-                        <span class="del-btn" onclick="deleteMsg({{m.id}})">🗑️</span>
-                    {% endif %}
-                </div>
+    <div class="chat-area">
+        <div id="messages">
+            {% for m in messages %}
+            <div class="msg {% if m.sender == username %}my{% endif %}">
+                <small>{{ m.sender }}</small><br>{{ m.message }}
             </div>
             {% endfor %}
         </div>
-        <div class="input-area">
-            <input type="text" id="m-input" placeholder="Написать..." autocomplete="off">
-            <button class="btn-ui" style="width:auto" onclick="sendMessage()">➤</button>
-        </div>
-    </div>
-
-    <div id="profile-panel">
-        <div style="padding:15px; cursor:pointer; background:rgba(0,0,0,0.05)" onclick="closeProfile()">✕ Закрыть</div>
-        <div class="p-info">
-            <img id="p-view-ava" src="" class="p-ava-huge">
-            <h2 id="p-view-name"></h2>
-            <p id="p-view-bio"></p>
-            <button id="p-view-action" class="btn-ui">Личное сообщение</button>
-            
-            <div id="my-edit-zone" style="display:none; margin-top:20px; border-top:1px solid #ddd; padding-top:20px;">
-                <form action="/edit-profile" method="POST">
-                    <textarea name="bio" style="width:100%; border-radius:5px; padding:5px;" placeholder="Твое био"></textarea>
-                    <input type="hidden" name="avatar_data" id="av_hidden">
-                    <input type="file" id="ava-pick" style="font-size:10px; margin:10px 0;">
-                    <button type="submit" class="btn-ui" style="background:#4caf50">Сохранить</button>
-                </form>
-            </div>
+        <div class="input-box">
+            <input type="text" id="m-input" placeholder="Напишите...">
+            <button onclick="send()">Отправить</button>
         </div>
     </div>
 
     <script>
         const socket = io();
-        const room = "{{ curr_group.id }}";
-        const myName = "{{ me.username }}";
+        let currentRecipient = null;
 
-        socket.emit('join', {room: room});
+        socket.on('connect', () => socket.emit('join', {}));
 
-        function sendMessage() {
-            const val = $('#m-input').val();
-            if(val.trim()) {
-                socket.emit('message', {room: room, msg: val});
-                $('#m-input').val('');
+        function setRecipient(name) {
+            currentRecipient = name;
+            document.querySelector('h3').innerText = name ? "Чат с " + name : "Общий чат";
+            document.getElementById('messages').innerHTML = ""; // Очистка для простоты при переключении
+        }
+
+        function send() {
+            const inp = document.getElementById('m-input');
+            if (inp.value) {
+                socket.emit('send_msg', {message: inp.value, recipient: currentRecipient});
+                inp.value = "";
             }
         }
 
-        socket.on('display_msg', d => {
-            const isMine = d.username === myName;
-            const ava = d.avatar ? d.avatar : `https://ui-avatars.com/api/?name=${d.username}`;
-            const html = `
-                <div class="msg-line ${isMine ? 'mine' : ''}" id="msg-${d.id}">
-                    <img src="${ava}" class="ava-msg" onclick="openProfile('${d.username}')">
-                    <div class="msg-bubble">
-                        ${!isMine ? `<div class="u-name" onclick="openProfile('${d.username}')">${d.username}</div>` : ''}
-                        ${d.content}
-                        ${isMine ? `<span class="del-btn" onclick="deleteMsg(${d.id})">🗑️</span>` : ''}
-                    </div>
-                </div>`;
-            $('#messages-container').append(html);
-            $('#messages-container').scrollTop($('#messages-container')[0].scrollHeight);
-            $(`#side-last-${d.room_id}`).text(d.content);
-        });
-
-        function deleteMsg(id) {
-            if(confirm("Удалить сообщение для всех?")) socket.emit('delete_message', {id: id, room: room});
-        }
-
-        socket.on('remove_msg', d => { $(`#msg-${d.id}`).fadeOut(200); });
-
-        // Профиль
-        function openProfile(user) { socket.emit('get_user_info', {username: user}); }
-        socket.on('user_info_res', d => {
-            $('#p-view-ava').attr('src', d.avatar ? d.avatar : `https://ui-avatars.com/api/?name=${d.username}`);
-            $('#p-view-name').text(d.username);
-            $('#p-view-bio').text(d.bio);
-            
-            if(d.username === myName) {
-                $('#p-view-action').hide();
-                $('#my-edit-zone').show();
-            } else {
-                $('#p-view-action').show().attr('onclick', `location.href='/create-private/${d.username}'`);
-                $('#my-edit-zone').hide();
+        socket.on('receive_msg', (data) => {
+            if (data.recipient === currentRecipient || (!data.recipient && !currentRecipient)) {
+                const div = document.createElement('div');
+                div.className = 'msg' + (data.sender === "{{ username }}" ? ' my' : '');
+                div.innerHTML = `<small>${data.sender}</small><br>${data.message}`;
+                document.getElementById('messages').appendChild(div);
+                document.getElementById('messages').scrollTop = 99999;
             }
-            $('#profile-panel').addClass('open');
         });
-        function closeProfile() { $('#profile-panel').removeClass('open'); }
-
-        // Темная тема
-        $('#theme-toggle').click(() => {
-            $('body').toggleClass('dark');
-            const isDark = $('body').hasClass('dark');
-            localStorage.setItem('theme', isDark ? 'dark' : 'light');
-            $('#theme-toggle').text(isDark ? '☀️' : '🌙');
-        });
-        if(localStorage.getItem('theme') === 'dark') { $('body').addClass('dark'); $('#theme-toggle').text('☀️'); }
-
-        // Загрузка фото в профиле
-       $('#file-input, #ava-pick').change(function(e) {
-    const file = e.target.files[0];
-    if (!file) return;
-
-    const reader = new FileReader();
-    reader.onload = function(event) {
-        const img = new Image();
-        img.onload = function() {
-            // Создаем виртуальный холст для перерисовки
-            const canvas = document.createElement('canvas');
-            const MAX_WIDTH = 400;
-            const MAX_HEIGHT = 400;
-            let width = img.width;
-            let height = img.height;
-
-            // Расчет пропорций
-            if (width > height) {
-                if (width > MAX_WIDTH) {
-                    height *= MAX_WIDTH / width;
-                    width = MAX_WIDTH;
-                }
-            } else {
-                if (height > MAX_HEIGHT) {
-                    width *= MAX_HEIGHT / height;
-                    height = MAX_HEIGHT;
-                }
-            }
-
-            canvas.width = width;
-            canvas.height = height;
-            const ctx = canvas.getContext('2d');
-            ctx.drawImage(img, 0, 0, width, height);
-
-            // Превращаем в сжатый JPEG (качество 0.7 = 70%)
-            const dataUrl = canvas.toDataURL('image/jpeg', 0.7);
-            
-            // Обновляем превью и скрытое поле
-            $('#p-view-ava, #avatar-preview').attr('src', dataUrl);
-            $('#av_hidden, #avatar-data-hidden').val(dataUrl);
-            
-            console.log("Картинка сжата и готова к отправке!");
-        };
-        img.src = event.target.result;
-    };
-    reader.readAsDataURL(file);
-});
-        $('#messages-container').scrollTop($('#messages-container')[0].scrollHeight);
     </script>
 </body>
 </html>
