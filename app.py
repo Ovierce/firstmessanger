@@ -1,13 +1,26 @@
 import eventlet
-eventlet.monkey_patch()
-import sqlite3, os, sys
+eventlet.monkey_patch()  # СТРОГО ПЕРВАЯ СТРОКА!
+
+import os
+import sqlite3
 from flask import Flask, render_template, request, session, redirect, url_for, flash
 from flask_socketio import SocketIO, emit, join_room
 from werkzeug.security import generate_password_hash, check_password_hash
 
 app = Flask(__name__)
-app.config['MAX_CONTENT_LENGTH'] = 16 * 1024 * 1024
-socketio = SocketIO(app, max_http_buffer_size=16 * 1024 * 1024)
+app.config['SECRET_KEY'] = 'secret-key-2026'
+
+# РЕШЕНИЕ ОШИБКИ "Request Entity Too Large"
+app.config['MAX_CONTENT_LENGTH'] = 16 * 1024 * 1024 
+
+# РЕШЕНИЕ ОШИБКИ "Internal Server Error" при работе с фото
+socketio = SocketIO(app, 
+    cors_allowed_origins="*", 
+    max_http_buffer_size=16 * 1024 * 1024,
+    async_mode='eventlet'
+)
+
+# ... далее идет твой остальной код (get_db, init_db и т.д.) ...
 
 def get_db():
     conn = sqlite3.connect('chat.db')
@@ -130,5 +143,6 @@ def user_info(data):
 if __name__ == '__main__':
     init_db()
     socketio.run(app, host='0.0.0.0', port=5000)
+
 
 
