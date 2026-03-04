@@ -16,7 +16,7 @@ app.config['UPLOAD_FOLDER'] = UPLOAD_FOLDER
 os.makedirs(UPLOAD_FOLDER, exist_ok=True)
 ALLOWED_EXTENSIONS = {'png', 'jpg', 'jpeg', 'gif'}
 
-socketio = SocketIO(app, cors_allowed_origins="*", async_mode='eventlet', ping_timeout=60)
+socketio = SocketIO(app, cors_allowed_origins="*", async_mode='eventlet')
 DATABASE = 'chat.db'
 
 def get_db():
@@ -36,31 +36,41 @@ def init_db():
 
 init_db()
 
-def allowed_file(filename):
-    return '.' in filename and filename.rsplit('.', 1)[1].lower() in ALLOWED_EXTENSIONS
-
 @app.route('/')
 def index():
     if 'user' not in session: return redirect(url_for('login'))
+    
     current_chat = request.args.get('chat')
+    search_query = request.args.get('search', '').strip()
+    
     with get_db() as conn:
         me = conn.execute('SELECT * FROM users WHERE username = ?', (session['user'],)).fetchone()
-        if not me:
-            session.pop('user', None)
-            return redirect(url_for('login'))
-        users = conn.execute('SELECT username, avatar, bio FROM users WHERE username != ?', (session['user'],)).fetchall()
+        
+        # Поиск пользователей (исключая себя)
+        if search_query:
+            users = conn.execute('SELECT username, avatar FROM users WHERE username LIKE ? AND username != ?', 
+                                 ('%'+search_query+'%', session['user'])).fetchall()
+        else:
+            # Если поиска нет, показываем тех, с кем уже есть переписка (активные чаты)
+            users = conn.execute('''SELECT DISTINCT username, avatar FROM users 
+                                    JOIN messages ON (users.username = messages.sender OR users.username = messages.recipient)
+                                    WHERE (messages.sender = ? OR messages.recipient = ?) AND users.username != ?''', 
+                                 (session['user'], session['user'], session['user'])).fetchall()
+        
+        messages = []
+        curr_group = None
         
         if current_chat:
             messages = conn.execute('''SELECT * FROM messages WHERE (sender = ? AND recipient = ?) 
                                      OR (sender = ? AND recipient = ?) ORDER BY timestamp ASC''', 
                                   (session['user'], current_chat, current_chat, session['user'])).fetchall()
-            chat_info = conn.execute('SELECT username, avatar FROM users WHERE username = ?', (current_chat,)).fetchone()
-            curr_group = {'id': current_chat, 'name': current_chat, 'type': 'dm', 'avatar': chat_info['avatar'] if chat_info else '👤'}
-        else:
-            messages = conn.execute('SELECT * FROM messages WHERE recipient IS NULL ORDER BY timestamp ASC').fetchall()
-            curr_group = {'id': 'global', 'name': 'Общий чат', 'type': 'global', 'avatar': '🌍'}
-    return render_template('index.html', me=me, users=users, messages=messages, curr_group=curr_group)
+            chat_info = conn.execute('SELECT username, avatar, bio FROM users WHERE username = ?', (current_chat,)).fetchone()
+            if chat_info:
+                curr_group = {'id': current_chat, 'name': current_chat, 'avatar': chat_info['avatar'], 'bio': chat_info['bio']}
+            
+    return render_template('index.html', me=me, users=users, messages=messages, curr_group=curr_group, search_query=search_query)
 
+# ... (остальные функции: /profile, /login, /register остаются без изменений из предыдущего ответа) ...
 # Обрабатываем и /profile и /update_profile, чтобы не было 404
 @app.route('/profile', methods=['GET', 'POST'])
 @app.route('/update_profile', methods=['GET', 'POST'])
@@ -139,3 +149,4 @@ def handle_msg(data):
 
 if __name__ == '__main__':
     socketio.run(app, host='0.0.0.0', port=int(os.environ.get("PORT", 5000)))
+
